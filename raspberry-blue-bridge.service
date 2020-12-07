@@ -1,0 +1,9 @@
+
+[Unit]
+Description=Raspberry Blue Bridge
+
+[Service]
+ExecStart=_BIN_/raspberry-blue-bridge
+
+[Install]
+WantedBy=multi-user.target
