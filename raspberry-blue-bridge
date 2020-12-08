@@ -1,7 +1,8 @@
 #!/bin/bash
 
-[ $USER == root ] || {
-    echo "Run as sudo"
+UID=$(id -u)
+[ $UID -eq 0 ] || {
+    echo "Run as root or sudo. UID=$UID"
     exit 1
 }
 
