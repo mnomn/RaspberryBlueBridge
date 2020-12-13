@@ -1,6 +1,8 @@
 #!/bin/bash
 
-UID=$(id -u)
+# If UID not set. Set it."
+[ $UIDX ] || UIDX=$(id -u)
+
 [ $UID -eq 0 ] || {
     echo "Run as root or sudo. UID=$UID"
     exit 1
