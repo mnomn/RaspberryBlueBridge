@@ -12,6 +12,12 @@ from rbb import messenger
 
 _message_queue = None
 
+# Built in Characteristics, without interesting measurement data.
+ignore_list  = [
+    "00002a00-0000-1000-8000-00805f9b34fb", # Device Name
+    "00002a01-0000-1000-8000-00805f9b34fb", # Appearence
+    "00002a05-0000-1000-8000-00805f9b34fb", # Service Changed
+]
 
 def listen():
     devs = devices.getAll()
@@ -56,15 +62,13 @@ class NotifyDelegate(btle.DefaultDelegate):
         log.info(f"Notification received data: {data} size: {len(data)}")
 
         try:
-            sign = convert_bytes_to_signed(data)
+            signed_int = convert_bytes_to_signed(data)
+            _message_queue.sendMessage(
+                self.mac, self.name, char_name, signed_int
+            )
 
         except UnicodeDecodeError as ex:
             log.error(f"Cannot convert bytes to signed int: {data} {ex}")
-            dataInt = -1
-
-        mess = _message_queue.sendMessage(
-            self.mac, self.name, char_name, sign
-        )
 
 
 def convert_bytes_to_signed(bytes):
@@ -77,58 +81,87 @@ def convert_bytes_to_signed(bytes):
 def _listen(mac, name, interval):
     while True:
         try:
-            log.info(f"Connect to {mac} {name}")
-            arduinoBle = btle.Peripheral(mac)
-
-            log.debug("Get services and characteristics")
-            services = arduinoBle.getServices()
-            # For each handle, save uuid so it can be used in notify
-            char_guids = {}
-            for s in services:
-                log.debug(f"Service:, {s}, {s.uuid}")
-                schars = s.getCharacteristics()
-                for sc in schars:
-                    log.debug(
-                        f"Char: {sc}, {sc.uuid}, Readable: {sc.supportsRead()}"
-                    )
-
-                    cccd = sc.getDescriptors(forUUID="2902")
-                    if cccd:
-                        # handle2char[]
-                        log.debug(f"Listen to notify for {sc.uuid}")
-                        for d in cccd:
-                            setup_data = b"\x01\x00"  # Activate nofigications
-                            if d.handle:
-                                arduinoBle.writeCharacteristic(
-                                    d.handle, setup_data, withResponse=True
-                                )
-                            else:
-                                print("Handle is None")
-                        if sc.supportsRead():
-                            char_guids[sc.getHandle()] = sc.uuid
-
-            # Scan for 30 sec before disconnect
-            arduinoBle.withDelegate(
-                NotifyDelegate(mac, name, char_guids))
-
-            endtime = time.time() + 10
-
-            while True:
-                if interval:
-                    now = time.time()
-                    if interval and now > endtime:
-                        log.info(f"Disconnect {name} and wait {interval} sec")
-                        arduinoBle.disconnect()
-                        break
-                if arduinoBle.waitForNotifications(1.0):
-                    continue
-
             if interval:
+                _read_characteristics(mac, name)
+                log.info(f"Listen done, sleep for {interval} s")
                 time.sleep(interval)
-
+            else:
+                _listen_notify(mac, name)
         except btle.BTLEDisconnectError:
             print("* Disconnect error Retry", sys.exc_info()[0])
             time.sleep(5)
+
+
+def _listen_notify(mac, name):
+    log.info(f"Connect to {mac} {name}")
+    arduinoBle = btle.Peripheral(mac)
+
+    log.debug("Get services and characteristics")
+    services = arduinoBle.getServices()
+    # For each handle, save uuid so it can be used in notify
+    char_guids = {}
+    for s in services:
+        log.debug(f"Service:, {s}, {s.uuid}")
+        schars = s.getCharacteristics()
+        for sc in schars:
+            log.debug(
+                f"Char: {sc}, {sc.uuid}, Readable: {sc.supportsRead()}"
+            )
+
+            cccd = sc.getDescriptors(forUUID="2902")
+            if cccd:
+                log.debug(f"Listen to notify for {sc.uuid}")
+                for d in cccd:
+                    setup_data = b"\x01\x00"  # Activate nofigications
+                    if d.handle:
+                        arduinoBle.writeCharacteristic(
+                            d.handle, setup_data, withResponse=True
+                        )
+                    else:
+                        print("Handle is None")
+                if sc.supportsRead():
+                    char_guids[sc.getHandle()] = sc.uuid
+
+    arduinoBle.withDelegate(
+        NotifyDelegate(mac, name, char_guids))
+
+    while True:
+        if arduinoBle.waitForNotifications(1.0):
+            continue
+
+
+def _read_characteristics(mac, name):
+    log.info(f"Connect to {mac} {name}")
+    arduinoBle = btle.Peripheral(mac)
+
+    log.debug("Get services and characteristics")
+    services = arduinoBle.getServices()
+
+    for s in services:
+        log.debug(f"Service:, {s}, {s.uuid}")
+        schars = s.getCharacteristics()
+        for sc in schars:
+            if sc.uuid in ignore_list:
+                continue
+
+            supportsRead = sc.supportsRead()
+            log.debug(
+                f"Char: {sc}, {sc.uuid}, Readable: {supportsRead}"
+            )
+            if sc.supportsRead():
+                val = sc.read()
+                log.info(f"READ VAL: {val}")
+
+            try:
+                signed_int = convert_bytes_to_signed(val)
+                _message_queue.sendMessage(
+                    mac, name, sc.uuid, signed_int
+                )
+
+            except UnicodeDecodeError as ex:
+                log.error(f"Cannot convert bytes to signed int: {sc.uuid} {val} {ex}")
+
+    arduinoBle.disconnect()
 
 
 if __name__ == "__main__":
