@@ -27,18 +27,21 @@ cd RaspberryBlueBridge-main
 sudo bash install.sh
 ````
 
+## Configure
 ### Configure MQTT
 Configuration is done in /usr/local/etc/raspberry-blue-bridge.
 
-The file raspberry-blue-bridge.conf configures MQPP server.
+The file raspberry-blue-bridge.conf configures MQTT server.
 
-### Scan for devices
-Before listening to bluetooth we must scan for devices.
+### Configure BLE devices
+We must first get a list of devices that we shall read data from. It is done by scannng.
 
 `sudo raspberry-blue-bridge -s`
 
-[Arduino example code](https://github.com/arduino-libraries/ArduinoBLE/tree/master/examples/Peripheral)
+Devices with readable, notifiable characteristics will be stored in /usr/local/etc/raspberry-blue-bridge/devices.
+Devices are not overwritten, only new devices are added.
 
+## Start
 ### Run manually
 `sudo raspberry-blue-bridge` starts normal operation in the terminal window.
 

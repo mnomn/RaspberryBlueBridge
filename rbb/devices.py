@@ -17,7 +17,7 @@ def getAll():
     try:
         d = _getDevicesDir()
         all_files = os.listdir(d)
-        log.info(f"All files: {all_files}")
+        log.debug(f"All files: {all_files}")
         device_files = [f for f in all_files if f.endswith(".conf")]
         config = ConfigParser()
         for f in device_files:

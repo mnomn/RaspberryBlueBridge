@@ -41,6 +41,13 @@ def listen():
             log.warn("No devices paired/active")
         for t in _threads:
             t.start()
+        
+        tlen = len(_threads)
+        log.debug(f"Wait for {tlen} threads")
+        for t in _threads:
+            t.join()
+        log.debug("All threads ended")
+
     except dbm.error:
         log.error("No devices scanned.")
     except KeyboardInterrupt:
@@ -74,7 +81,7 @@ class NotifyDelegate(btle.DefaultDelegate):
 def convert_bytes_to_signed(bytes):
     data_len = len(bytes)
     dataInt = int.from_bytes(bytes, byteorder='little', signed=True)
-    log.debug(f"Notification received dataInt L: {dataInt} Len: {data_len}")
+    log.debug(f"Notification received dataInt: {dataInt} Len: {data_len}")
     return dataInt
 
 
@@ -90,6 +97,9 @@ def _listen(mac, name, interval):
         except btle.BTLEDisconnectError:
             print("* Disconnect error Retry", sys.exc_info()[0])
             time.sleep(5)
+        except:
+            e = sys.exc_info()[0]
+            log.error(f"_listen {mac} exception: {e}")
 
 
 def _listen_notify(mac, name):
