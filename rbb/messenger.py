@@ -1,3 +1,4 @@
+import sys
 import threading
 import queue
 import paho.mqtt.publish as publish
@@ -38,9 +39,13 @@ class Messenger:
 
     def mqttPost(self):
         while True:
-            item = self.queue.get()
-            log.debug(f"Send MQTT message: {item} to {self.host}")
-            publish.single(
-                item["TOPIC"], item["DATA"], auth=self.auth,
-                hostname=self.host, port=int(self.port)
-            )
+            try:
+                item = self.queue.get()
+                log.debug(f"Send MQTT message: {item} to {self.host}")
+                publish.single(
+                    item["TOPIC"], item["DATA"], auth=self.auth,
+                    hostname=self.host, port=int(self.port)
+                )
+            except:
+                e = sys.exc_info()[0]
+                log.error(f"mqttPost exception: {e}")
