@@ -54,3 +54,12 @@ systemctl restart raspberry-blue-bridge.service
 
 ## Help
 For more options: `raspberry-blue-bridge -h`
+
+## MQTT
+MQTTT messages are sent as one topic per relevant characteristic. A device can have many characteristics.
+MQTT topics are named: `{mac}/{LocalName}/{CharacteristicGuid}` with data as payload in signed integer format.
+Example: `f176a11ab394/MySensor/19b10112-e8f2-537e-4f6c-d104768a1214` payload: `-4`
+
+There is also a message sent when the devices is connected.
+`{mac}/{LocalName}/connected` without any data.
+Example: `f176a11ab394/MySensor/connected`

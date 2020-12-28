@@ -62,7 +62,6 @@ class NotifyDelegate(btle.DefaultDelegate):
         btle.DefaultDelegate.__init__(self)
 
     def handleNotification(self, cHandle, data):
-        # TODO: Store "serviceGuid:characteristicGuid" so it can be sent here
         if cHandle not in self.char_guids:
             log.error("Error: No guid for this handle")
         char_name = self.char_guids[cHandle]
@@ -105,6 +104,8 @@ def _listen(mac, name, interval):
 def _listen_notify(mac, name):
     log.info(f"Connect to {mac} {name}")
     arduinoBle = btle.Peripheral(mac)
+
+    _message_queue.sendMessage(mac, name, "connected", None)
 
     log.debug("Get services and characteristics")
     services = arduinoBle.getServices()
