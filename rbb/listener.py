@@ -33,8 +33,7 @@ def listen():
             if not enabled:
                 log.info(f"Device {mac} {name} not enabled")
                 continue
-            interval = dev.get(devices.kREAD_INTERVAL, 0)
-            t = threading.Thread(target=_listen, args=(mac, name, interval))
+            t = threading.Thread(target=_listen, args=(mac, name))
             _threads.append(t)
 
         if len(_threads) == 0:
@@ -72,9 +71,11 @@ class NotifyDelegate(btle.DefaultDelegate):
             _message_queue.sendMessage(
                 self.mac, self.name, char_name, signed_int
             )
-
         except UnicodeDecodeError as ex:
             log.error(f"Cannot convert bytes to signed int: {data} {ex}")
+        except:
+            e = sys.exc_info()[0]
+            log.error(f"NotifyDelegate {mac} exception: {e}")
 
 
 def convert_bytes_to_signed(bytes):
@@ -84,15 +85,10 @@ def convert_bytes_to_signed(bytes):
     return dataInt
 
 
-def _listen(mac, name, interval):
+def _listen(mac, name):
     while True:
         try:
-            if interval:
-                _read_characteristics(mac, name)
-                log.info(f"Listen done, sleep for {interval} s")
-                time.sleep(interval)
-            else:
-                _listen_notify(mac, name)
+            _listen_notify(mac, name)
         except btle.BTLEDisconnectError:
             print("* Disconnect error Retry", sys.exc_info()[0])
             time.sleep(5)
@@ -139,40 +135,6 @@ def _listen_notify(mac, name):
     while True:
         if arduinoBle.waitForNotifications(1.0):
             continue
-
-
-def _read_characteristics(mac, name):
-    log.info(f"Connect to {mac} {name}")
-    arduinoBle = btle.Peripheral(mac)
-
-    log.debug("Get services and characteristics")
-    services = arduinoBle.getServices()
-
-    for s in services:
-        log.debug(f"Service:, {s}, {s.uuid}")
-        schars = s.getCharacteristics()
-        for sc in schars:
-            if sc.uuid in ignore_list:
-                continue
-
-            supportsRead = sc.supportsRead()
-            log.debug(
-                f"Char: {sc}, {sc.uuid}, Readable: {supportsRead}"
-            )
-            if sc.supportsRead():
-                val = sc.read()
-                log.info(f"READ VAL: {val}")
-
-            try:
-                signed_int = convert_bytes_to_signed(val)
-                _message_queue.sendMessage(
-                    mac, name, sc.uuid, signed_int
-                )
-
-            except UnicodeDecodeError as ex:
-                log.error(f"Cannot convert bytes to signed int: {sc.uuid} {val} {ex}")
-
-    arduinoBle.disconnect()
 
 
 if __name__ == "__main__":
