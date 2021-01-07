@@ -23,7 +23,7 @@ class Messenger:
             self.auth["username"] = settings["USERNAME"]
             self.auth["password"] = settings["PASSWORD"]
 
-        log.info(f"HOST {self.host}, PORT  {self.port}")
+        log.info(f"MQTT HOST {self.host}, PORT  {self.port}")
 
         self.queue = queue.Queue()
         # Todo: config as input

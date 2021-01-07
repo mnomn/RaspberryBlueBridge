@@ -9,8 +9,10 @@ import struct
 from rbb import scanner
 from rbb import devices
 from rbb import messenger
+from rbb import db_influx
 
 _message_queue = None
+_db_influx = None
 
 # Built in Characteristics, without interesting measurement data.
 ignore_list  = [
@@ -23,7 +25,10 @@ def listen():
     devs = devices.getAll()
     message_queue = messenger.Messenger()
     global _message_queue
+    global _db_influx
     _message_queue = message_queue
+    _db_influx = db_influx.DbInflux()
+
     _threads = []
     try:
         for dev in devs:
@@ -69,13 +74,19 @@ class NotifyDelegate(btle.DefaultDelegate):
 
         try:
             signed_int = convert_bytes_to_signed(data)
-            _message_queue.sendMessage(
+            _message_queue.send_message(
+                self.mac, self.name, char_name, signed_int
+            )
+
+            _db_influx.insert_data(
                 self.mac, self.name, char_name, signed_int
             )
 
         except UnicodeDecodeError as ex:
             log.error(f"Cannot convert bytes to signed int: {data} {ex}")
-
+        except:
+            e = sys.exc_info()[0]
+            log.error(f"handleNotification {mac} exception: {e}")
 
 def convert_bytes_to_signed(bytes):
     data_len = len(bytes)
@@ -105,7 +116,8 @@ def _listen_notify(mac, name):
     log.info(f"Connect to {mac} {name}")
     arduinoBle = btle.Peripheral(mac)
 
-    _message_queue.sendMessage(mac, name, "connected", None)
+    _message_queue.send_message(mac, name, "connected", None)
+    _db_influx.insert_data(mac, name, "connected", 1)
 
     log.debug("Get services and characteristics")
     services = arduinoBle.getServices()
@@ -165,9 +177,11 @@ def _read_characteristics(mac, name):
 
             try:
                 signed_int = convert_bytes_to_signed(val)
-                _message_queue.sendMessage(
+                _message_queue.send_message(
                     mac, name, sc.uuid, signed_int
                 )
+                if _influx:
+                    _db.insert(mac, name, sc.uuid, signed_int)
 
             except UnicodeDecodeError as ex:
                 log.error(f"Cannot convert bytes to signed int: {sc.uuid} {val} {ex}")

@@ -21,8 +21,7 @@ VENV=$RBB_DIR/venv
 [ -d $VENV ] || {
     echo "Set up venv $VENV"
     python3 -m venv $VENV
-    source $VENV/bin/activate
-    pip3 install -r $RBB_DIR/requirements.txt
+    $VENV/bin/pip3 install -r $RBB_DIR/requirements.txt
 }
 
 $VENV/bin/python $RBB_DIR/rbb.py --dir $RBB_DIR $@
