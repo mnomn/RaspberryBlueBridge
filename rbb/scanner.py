@@ -40,7 +40,6 @@ def _show_list(devs):
     for dev in devs:
         mac = dev.get("mac", "")
         name = dev.get(devices.kNAME, "")
-        interval = dev.get(devices.kREAD_INTERVAL, 0)
         print(f'- {mac} "{name}"')
 
     print("Configure devices in ")

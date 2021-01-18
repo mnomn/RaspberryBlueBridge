@@ -8,7 +8,6 @@ import pathlib
 from rbb import configuration
 
 kNAME = "name"
-kREAD_INTERVAL = "read_interval"
 kENABLED = "enabled"
 
 
@@ -45,7 +44,6 @@ def putOne(mac, name):
     config["device"] = {
         "mac": mac,
         "name": name,
-        kREAD_INTERVAL: 0,  # Configured manually in file
         kENABLED: True      # Configured manually in file
     }
 
@@ -66,8 +64,6 @@ def _parseOneConfig(conf):
 
     dev = conf["device"]
     # Format values
-    interval = dev.get(kREAD_INTERVAL, 0)
-    interval = _toNumber(interval)
     enabled = dev.get(kENABLED, True)
     if isinstance(enabled, str):
         t = enabled.lower()
@@ -76,7 +72,6 @@ def _parseOneConfig(conf):
         device_info = {
             "mac": dev["mac"],
             "name": dev["name"],
-            kREAD_INTERVAL: interval,
             kENABLED: enabled
         }
 
