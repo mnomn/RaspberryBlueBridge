@@ -18,12 +18,15 @@ class Messenger:
             self.host = settings["HOST"]
         if "PORT" in settings:
             self.port = settings["PORT"]
-        if ("USERNAME" in settings) and ("PASSWORD" in settings):
-            self.auth = {}
-            self.auth["username"] = settings["USERNAME"]
-            self.auth["password"] = settings["PASSWORD"]
 
-        log.info(f"HOST {self.host}, PORT  {self.port}")
+        username = settings.get("USERNAME")
+        password = settings.get("PASSWORD")
+        if username and password:
+            self.auth = {}
+            self.auth["username"] = username
+            self.auth["password"] = password
+
+        log.info(f"HOST {self.host}, PORT  {self.port} USER: {username}")
 
         self.queue = queue.Queue()
         # Todo: config as input
