@@ -42,8 +42,6 @@ def _show_list(devs):
         name = dev.get(devices.kNAME, "")
         print(f'- {mac} "{name}"')
 
-    print("Configure devices in ")
-
 
 _knownMacs = []
 

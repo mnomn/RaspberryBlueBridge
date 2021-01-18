@@ -40,6 +40,9 @@ def putOne(mac, name):
         log.info(f"Device {mac} is already scanned. Do not overrite.")
         return
 
+    name = name.replace(":", "_")
+    name = name.replace(" ", "")
+
     config = ConfigParser()
     config["device"] = {
         "mac": mac,
