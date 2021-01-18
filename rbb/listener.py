@@ -12,6 +12,8 @@ from rbb import messenger
 
 _message_queue = None
 
+_abort = False
+
 # Built in Characteristics, without interesting measurement data.
 ignore_list  = [
     "00002a00-0000-1000-8000-00805f9b34fb", # Device Name
@@ -50,7 +52,9 @@ def listen():
     except dbm.error:
         log.error("No devices scanned.")
     except KeyboardInterrupt:
-        log.error("KBD INTERRUPT!!!.")
+        log.error("Kbd interrupt")
+        global _abort
+        _abort = True
 
 
 class NotifyDelegate(btle.DefaultDelegate):
@@ -75,7 +79,7 @@ class NotifyDelegate(btle.DefaultDelegate):
             log.error(f"Cannot convert bytes to signed int: {data} {ex}")
         except:
             e = sys.exc_info()[0]
-            log.error(f"NotifyDelegate {mac} exception: {e}")
+            log.error(f"NotifyDelegate {self.mac} exception: {e}")
 
 
 def convert_bytes_to_signed(bytes):
@@ -86,40 +90,71 @@ def convert_bytes_to_signed(bytes):
 
 
 def _listen(mac, name):
-    while True:
+    while not _abort:
         try:
             _listen_notify(mac, name)
         except btle.BTLEDisconnectError:
+            if _abort:
+                break
             print("* Disconnect error Retry", sys.exc_info()[0])
             time.sleep(5)
         except:
             e = sys.exc_info()[0]
             log.error(f"_listen {mac} exception: {e}")
+            time.sleep(5)
 
+# Use last bit of mac (msb) to determine if it is a public or random address
+def getAddressType(mac):
+    if len(mac) > 2:
+        lastByteStr = mac[0:2]
+        lastByte = int(lastByteStr, 16)
+        log.debug (f"LAST BYTE {lastByte}")
+        odd = lastByte%2 == 1
+        if odd:
+            log.debug (f"LAST BYTE ODD RANDOM ADDR")
+            return btle.ADDR_TYPE_RANDOM
+
+    return btle.ADDR_TYPE_PUBLIC
 
 def _listen_notify(mac, name):
     log.info(f"Connect to {mac} {name}")
-    arduinoBle = btle.Peripheral(mac)
+
+    addressType = getAddressType(mac)
+
+    arduinoBle = btle.Peripheral(mac, addressType)
 
     _message_queue.sendMessage(mac, name, "connected", None)
 
     log.debug("Get services and characteristics")
     services = arduinoBle.getServices()
+
     # For each handle, save uuid so it can be used in notify
     char_guids = {}
     for s in services:
         log.debug(f"Service:, {s}, {s.uuid}")
+        if s.hndStart == s.hndEnd:
+            continue
         schars = s.getCharacteristics()
         for sc in schars:
             log.debug(
-                f"Char: {sc}, {sc.uuid}, Readable: {sc.supportsRead()}"
+                f"Char: h={sc.valHandle}, {sc.uuid}, Readable: {sc.supportsRead()}"
             )
+
+            h = sc.getHandle()
+            if h > s.hndEnd:
+                log.debug(f"Service handle too high {h}")
+                continue
+
+            props = sc.propertiesToString()
+            if not "READ" in props or not "NOTIFY" in props:
+                log.debug("Characteristic is not 'read notify'")
+                continue
 
             cccd = sc.getDescriptors(forUUID="2902")
             if cccd:
                 log.debug(f"Listen to notify for {sc.uuid}")
                 for d in cccd:
-                    setup_data = b"\x01\x00"  # Activate nofigications
+                    setup_data = b"\x01\x00"  # Activate notifications
                     if d.handle:
                         arduinoBle.writeCharacteristic(
                             d.handle, setup_data, withResponse=True
@@ -132,7 +167,7 @@ def _listen_notify(mac, name):
     arduinoBle.withDelegate(
         NotifyDelegate(mac, name, char_guids))
 
-    while True:
+    while not _abort:
         if arduinoBle.waitForNotifications(1.0):
             continue
 

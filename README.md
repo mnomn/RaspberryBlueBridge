@@ -7,14 +7,20 @@ When the BLE device writes *-4* to the characteristic, this program will listen 
 Mqtt Topic: `f176a11ab394/MySensor/19b10112-e8f2-537e-4f6c-d104768a1214`  
 Data payload: `-4`
 
-## Supported/tested hardware
-Only tested on Raspberry pi 3 (Raspbian 10) and Arduino Nano 33 BLE.
-Bluetooth devices must be connectable, have a characteristic that is readable and that notifies when data is available. Channels can have different number of bytes (1,2 or 4).
+Write characteristics are not supported.
+
+## Ble devices
+Bluetooth devices must peripehral, connectable, have a characteristic that is readable and that notifies when data is available. Channels can have different number of bytes (1,2 or 4).
 Data will be formatted as signed (int8/int16/int32).
 
-## Install
+Tested devices:
+- Arduino Nano 33 BLE: Peripheral sketch with one or more charactersitics with NOTIFY and READ.
+- Micro:bit (original): Create bluetooth sketch in makecode.microbit.org. For example temperature or button service. Pairing is not supported.
+
+## Install on Raspberry pi
 ### Install prerequisite
-* Raspberry pi running Raspberry OS or similar.
+* Raspberry pi running Raspberry OS or similar. Only tested on Raspberry pi 3 (Raspbian 10)
+
 * An mqtt server. Can be on the same raspberry pi or another machine.
 
 Download software to a temporary folder on your raspberry pi and run `sudo install.sh`.
