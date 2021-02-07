@@ -58,9 +58,8 @@ def listen():
 
 
 class NotifyDelegate(btle.DefaultDelegate):
-    def __init__(self, mac, name, char_guids):
-        self.mac = mac.replace(':', '')
-        self.name = name
+    def __init__(self, device_name, char_guids):
+        self.device_name = device_name
         self.char_guids = char_guids
         btle.DefaultDelegate.__init__(self)
 
@@ -73,13 +72,13 @@ class NotifyDelegate(btle.DefaultDelegate):
         try:
             signed_int = convert_bytes_to_signed(data)
             _message_queue.sendMessage(
-                self.mac, self.name, char_name, signed_int
+                self.device_name, char_name, signed_int
             )
         except UnicodeDecodeError as ex:
             log.error(f"Cannot convert bytes to signed int: {data} {ex}")
         except:
             e = sys.exc_info()[0]
-            log.error(f"NotifyDelegate {self.mac} exception: {e}")
+            log.error(f"NotifyDelegate {self.device_name} exception: {e}")
 
 
 def convert_bytes_to_signed(bytes):
@@ -91,12 +90,14 @@ def convert_bytes_to_signed(bytes):
 
 def _listen(mac, name):
     while not _abort:
+        _listen_notify(mac, name)
         try:
             _listen_notify(mac, name)
         except btle.BTLEDisconnectError:
             if _abort:
                 break
-            print("* Disconnect error Retry", sys.exc_info()[0])
+            inf = sys.exc_info()[0]
+            print(f"* Disconnect error {mac} Retry {inf}")
             time.sleep(5)
         except:
             e = sys.exc_info()[0]
@@ -108,10 +109,8 @@ def getAddressType(mac):
     if len(mac) > 2:
         lastByteStr = mac[0:2]
         lastByte = int(lastByteStr, 16)
-        log.debug (f"LAST BYTE {lastByte}")
         odd = lastByte%2 == 1
         if odd:
-            log.debug (f"LAST BYTE ODD RANDOM ADDR")
             return btle.ADDR_TYPE_RANDOM
 
     return btle.ADDR_TYPE_PUBLIC
@@ -123,7 +122,10 @@ def _listen_notify(mac, name):
 
     arduinoBle = btle.Peripheral(mac, addressType)
 
-    _message_queue.sendMessage(mac, name, "connected", None)
+    device_name = mac.replace(':', '')
+    device_name += "/" + name
+
+    _message_queue.sendMessage(device_name, "connected", None)
 
     log.debug("Get services and characteristics")
     services = arduinoBle.getServices()
@@ -165,7 +167,7 @@ def _listen_notify(mac, name):
                     char_guids[sc.getHandle()] = sc.uuid
 
     arduinoBle.withDelegate(
-        NotifyDelegate(mac, name, char_guids))
+        NotifyDelegate(device_name, char_guids))
 
     while not _abort:
         if arduinoBle.waitForNotifications(1.0):

@@ -33,9 +33,9 @@ class Messenger:
         self.queue = queue.Queue()
         threading.Thread(target=self.mqttPost, daemon=True).start()
 
-    def sendMessage(self, mac, name, char_guid, data):
+    def sendMessage(self, device_name, char_guid, data):
         item = {}
-        item["TOPIC"] = f"{mac}/{name}/{char_guid}"
+        item["TOPIC"] = f"{device_name}/{char_guid}"
         item["DATA"] = data
 
         self.queue.put(item)
