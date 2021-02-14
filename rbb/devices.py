@@ -1,5 +1,5 @@
 import dbm
-import logging as log
+import logging
 import sys
 import os
 from configparser import ConfigParser
@@ -9,6 +9,8 @@ from rbb import configuration
 
 kNAME = "name"
 kENABLED = "enabled"
+
+log = logging.getLogger("device")
 
 
 def getAll():

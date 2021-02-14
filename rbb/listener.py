@@ -90,7 +90,6 @@ def convert_bytes_to_signed(bytes):
 
 def _listen(mac, name):
     while not _abort:
-        _listen_notify(mac, name)
         try:
             _listen_notify(mac, name)
         except btle.BTLEDisconnectError:
@@ -105,20 +104,20 @@ def _listen(mac, name):
             time.sleep(5)
 
 # Use last bit of mac (msb) to determine if it is a public or random address
-def getAddressType(mac):
+def _get_address_type(mac):
     if len(mac) > 2:
         lastByteStr = mac[0:2]
         lastByte = int(lastByteStr, 16)
-        odd = lastByte%2 == 1
-        if odd:
+        # Random static: The two most significant bits of the static address shall be equal to ‘1’
+        isRandom = (lastByte & 0b11000000 == 0b11000000)
+        if isRandom:
             return btle.ADDR_TYPE_RANDOM
 
     return btle.ADDR_TYPE_PUBLIC
 
 def _listen_notify(mac, name):
-    log.info(f"Connect to {mac} {name}")
-
-    addressType = getAddressType(mac)
+    addressType = _get_address_type(mac)
+    log.info(f"Connect to {mac} {name} {addressType}")
 
     arduinoBle = btle.Peripheral(mac, addressType)
 

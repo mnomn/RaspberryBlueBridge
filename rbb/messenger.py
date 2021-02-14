@@ -2,10 +2,11 @@ import sys
 import threading
 import queue
 import paho.mqtt.publish as publish
-import logging as log
+import logging
 
 from rbb import configuration
 
+log = logging.getLogger("device")
 
 class Messenger:
     def __init__(self):
